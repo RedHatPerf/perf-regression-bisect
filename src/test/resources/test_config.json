@@ -1,0 +1,30 @@
+{
+  "project": {
+    "repoUrl": "https://github.com/johnaohara/demo-repo.git",
+    "badCommit": "ae9bc2cb4984e0865b649b8b19743eee05451acf",
+    "goodCommit": "c15c9c6378ecd82b3b0df0334ef1941cbb6a2fe1"
+  },
+  "validator": {
+    "ScalarFileLimitValidator": {
+      "filePath": "localhost/result.out",
+      "limit": "12"
+    }
+  },
+  "qDup": {
+    "scriptFile": "qDup.yaml",
+    "utilityScripts": [
+      "core-scripts/util.yaml"
+    ],
+    "repoUrl": "https://github.com/johnaohara/demo-qDup.git",
+    "branch": "*/main",
+    "credentials": {
+      "user": "",
+      "pword": ""
+    },
+    "commitParam": "WORKLOAD_COMMIT",
+    "params": {
+      "HOST": "localhost",
+      "USER": "johara"
+    }
+  }
+}
