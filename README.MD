@@ -1,5 +1,13 @@
 # Perf lab GIT auto-bisect
 
+---
+**NOTE**
+
+This prject is currently using a snapshot build of Aesh: https://github.com/aeshell/aesh
+You will need to build Aesh from source until the next Aesh release
+
+---
+
 Use binary search to automatically find the commit that introduced a performance regression
 
 The aim of this POC is to demonstrate running an automated bisect to identify the commit causing a performance regression in a range of commits. 

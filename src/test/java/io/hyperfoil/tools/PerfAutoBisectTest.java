@@ -2,6 +2,7 @@ package io.hyperfoil.tools;
 
 
 import org.aesh.AeshRuntimeRunner;
+import org.aesh.command.CommandResult;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -11,11 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class PerfAutoBisectTest {
 
-    static PerfAutoBisect perfAutoBisect;
+    static PerfAutoBisect.Bisector perfAutoBisect;
 
     @BeforeAll
     public static void initialize(){
-        perfAutoBisect = new PerfAutoBisect();
+        perfAutoBisect = new PerfAutoBisect.Bisector();
     }
 
     @Test
@@ -27,13 +28,12 @@ public class PerfAutoBisectTest {
 
         String[] args= {"-c", configFile};
 
-        AeshRuntimeRunner.builder().command(PerfAutoBisect.Bisector.class).args(args).execute();
+        CommandResult result = AeshRuntimeRunner.builder().command(perfAutoBisect).args(args).execute();
 
         //TODO: need Aesh release to be able to reason about the result of the command
-//        assertEquals(CommandResult.SUCCESS, result);
+        assertEquals(CommandResult.SUCCESS, result);
 
-        //ATM can not pass already instantiated Command Class into AeshRuntimeRunner to reason about state of command after it has been run
-        //assertEquals("d4b9d6a49972817b4acd8dfce00872aafe1721e3", perfAutoBisect.getBadCommitID());
+        assertEquals("d4b9d6a49972817b4acd8dfce00872aafe1721e3", perfAutoBisect.getBadCommitID());
 
 
     }

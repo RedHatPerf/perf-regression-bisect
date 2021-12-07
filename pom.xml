@@ -16,7 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
-    <aesh.version>2.6 </aesh.version>
+    <aesh.version>2.7-SNAPSHOT</aesh.version>
     <qDup.version>0.6.7</qDup.version>
     <jboss-logging.version>3.4.2.Final</jboss-logging.version>
     <commons-lang3.version>3.12.0</commons-lang3.version>
