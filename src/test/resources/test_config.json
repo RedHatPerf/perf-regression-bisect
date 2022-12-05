@@ -11,11 +11,11 @@
     }
   },
   "qDup": {
-    "scriptFile": "qDup.yaml",
+    "scriptFile": "test-script.yaml",
     "utilityScripts": [
       "core-scripts/util.yaml"
     ],
-    "repoUrl": "https://github.com/johnaohara/demo-qDup.git",
+    "repoUrl": "https://github.com/johnaohara/perf-bisect-qDup-scripts.git",
     "branch": "*/main",
     "credentials": {
       "user": "",
