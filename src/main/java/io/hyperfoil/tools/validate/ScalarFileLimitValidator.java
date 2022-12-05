@@ -10,13 +10,13 @@ public class ScalarFileLimitValidator extends Validator {
     private static final Logger logger = Logger.getLogger(ScalarFileLimitValidator.class);
 
     private String resultFilePath;
-    private Integer limit;
+    private Float limit;
 
     public ScalarFileLimitValidator(JsonNode validatorConfig) {
 
         //TODO:: proper error handling
         this.resultFilePath = validatorConfig.get("filePath").asText();
-        this.limit = Integer.parseInt(validatorConfig.get("limit").asText());
+        this.limit = Float.parseFloat(validatorConfig.get("limit").asText());
     }
 
     @Override
@@ -29,7 +29,7 @@ public class ScalarFileLimitValidator extends Validator {
             String text = reader.readLine();
             logger.infov("Value is : {0}", text);
 
-            Integer result = Integer.parseInt(text);
+            Float result = Float.parseFloat(text);
             if(result <= limit){
                 return true;
             }
