@@ -1,0 +1,115 @@
+
+
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "object",
+      "properties": {
+        "repoUrl": {
+          "type": "string"
+        },
+        "badCommitHash": {
+          "type": "string"
+        },
+        "goodCommitHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "repoUrl",
+        "badCommitHash",
+        "goodCommitHash"
+      ]
+    },
+    "validator": {
+      "type": "object",
+      "properties": {
+        "ScalarFileLimitValidator": {
+          "type": "object",
+          "properties": {
+            "filePath": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "filePath",
+            "limit"
+          ]
+        }
+      },
+      "required": [
+        "ScalarFileLimitValidator"
+      ]
+    },
+    "qDup": {
+      "type": "object",
+      "properties": {
+        "scriptFile": {
+          "type": "string"
+        },
+        "utilityScripts": {
+          "type": "array",
+          "items": [
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "repoUrl": {
+          "type": "string"
+        },
+        "branch": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "properties": {
+            "user": {
+              "type": "string"
+            },
+            "pword": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "user",
+            "pword"
+          ]
+        },
+        "commitParam": {
+          "type": "string"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "HOST": {
+              "type": "string"
+            },
+            "USER": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "HOST",
+            "USER"
+          ]
+        }
+      },
+      "required": [
+        "scriptFile",
+        "repoUrl",
+        "branch",
+        "commitParam"
+      ]
+    }
+  },
+  "required": [
+    "project",
+    "qDup"
+  ]
+}

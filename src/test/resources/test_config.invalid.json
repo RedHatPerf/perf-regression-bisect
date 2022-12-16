@@ -1,14 +1,7 @@
 {
   "project": {
     "repoUrl": "https://github.com/johnaohara/demo-repo.git",
-    "badCommitHash": "ae9bc2cb4984e0865b649b8b19743eee05451acf",
-    "goodCommitHash": "c15c9c6378ecd82b3b0df0334ef1941cbb6a2fe1"
-  },
-  "validator": {
-    "ScalarFileLimitValidator": {
-      "filePath": "localhost/result.out",
-      "limit": "12"
-    }
+    "goodCommit": "c15c9c6378ecd82b3b0df0334ef1941cbb6a2fe1"
   },
   "qDup": {
     "scriptFile": "https://raw.githubusercontent.com/johnaohara/perf-bisect-qDup-scripts/main/test-script.yaml",

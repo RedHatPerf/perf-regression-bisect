@@ -1,0 +1,42 @@
+scripts:
+  init-git-bisect:
+    - git-bisect-init:
+        remote-repo: ${{INPUT.project.repoUrl:}}
+        bad-commit-hash: ${{INPUT.project.badCommitHash:}}
+        good-commit-hash: ${{INPUT.project.goodCommitHash:}}
+
+  run-git-bisect:
+    - log: starting test
+    - set-signal: BISECT_DONE 1
+    - repeat-until: BISECT_DONE
+      then:
+      - git-bisect:
+        with:
+          completeSignal: BISECT_DONE
+      - json: $.commitHash
+      - set-state: RUN.commitHash
+      - log: run test with ${{RUN.commitHash:}}
+      - qdup-process:
+          scriptUrl: ${{INPUT.qDup.scriptFile:}}
+          commitParam: ${{INPUT.qDup.commitParam:}}
+          commitValue: ${{RUN.commitHash:}}
+      - scalar-file-limit-validator:
+          filename: localhost/result.out
+          limit: 12
+      - git-bisect-update
+    - log: bad commit - ${{gitBisect.badCommit:}}
+    - set-state: RUN.output.bad-commit ${{gitBisect.badCommit:}}
+    - sh: echo '${{RUN.output:}}' > result.json
+    - download: result.json
+    - sh: rm result.json
+hosts:
+  local: ${{USER}}@${{HOST}}
+roles:
+  perf-bisect:
+    hosts: [local]
+    setup-scripts: [init-git-bisect]
+    run-scripts: [run-git-bisect]
+states:
+  USER:
+  HOST:
+  INPUT:

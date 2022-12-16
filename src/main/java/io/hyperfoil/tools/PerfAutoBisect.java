@@ -1,10 +1,13 @@
 package io.hyperfoil.tools;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import io.hyperfoil.tools.tools.GitBisect;
-import io.hyperfoil.tools.tools.QDupRunner;
-import io.hyperfoil.tools.validate.Validator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.networknt.schema.ValidationMessage;
+import io.hyperfoil.tools.qdup.QDup;
+import io.hyperfoil.tools.qdup.cmd.impl.GitBisect;
+import io.hyperfoil.tools.qdup.cmd.impl.QdupProcessCmd;
+import io.hyperfoil.tools.qdup.cmd.impl.ScalarFileLimitValidatorCmd;
+import io.hyperfoil.tools.qdup.config.yaml.Parser;
+import io.hyperfoil.tools.schema.Validator;
 import org.aesh.AeshRuntimeRunner;
 import org.aesh.command.Command;
 import org.aesh.command.CommandDefinition;
@@ -14,13 +17,16 @@ import org.aesh.command.option.Option;
 import org.jboss.logging.Logger;
 
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
+import java.net.InetAddress;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedList;
-import java.util.Queue;
-
-import static io.hyperfoil.tools.tools.Util.*;
+import java.nio.file.Paths;
+import java.util.Set;
 
 class PerfAutoBisect {
 
@@ -33,129 +39,121 @@ class PerfAutoBisect {
 
         private static final Logger logger = Logger.getLogger(PerfAutoBisect.class);
 
-        @Option(shortName = 'c', name = "config", description = "Config File location")
-        private String configPath;
+        @Option(shortName = 'c', name = "config", description = "Config File location", required = true)
+        private File configFile;
 
-        @Option(shortName = 'o', name = "--out", description = "Output file location")
+        @Option(shortName = 'o', name = "--out", description = "Output file location", required = true)
         private File outputFile;
-        private static final Queue<Runnable> actions = new LinkedList<>();
-        static GitBisect bisect;
-        static QDupRunner runner;
-
-        static Validator validator;
-
-        private String badCommitID;
-
-        public String getBadCommitID() {
-            return badCommitID;
-        }
 
         @Override
         public CommandResult execute(CommandInvocation commandInvocation) throws InterruptedException {
             try {
-                logger.infov("Reading config from: {0}", configPath);
+                logger.infov("Reading config from: {0}", configFile);
 
-                File configFile = new File(configPath);
                 if (!configFile.exists()) {
-                    logger.errorv("Config file does not exist: {0}", configPath);
+                    logger.errorv("Config file does not exist: {0}", configFile);
                     return CommandResult.FAILURE;
                 }
 
-                initialize(configFile);
+                //create temp directory
+                Path tempDirWithPrefix = Files.createTempDirectory("perf-bisect-");
+                Path bisectYml = tempDirWithPrefix.resolve("perfBisect.qdup.yaml");
 
-                //loop until we run out of actions to perform
-                while (!actions.isEmpty()) {
-                    actions.remove().run();
+                //extract qdup.yaml into tmpDir
+                try (InputStream is = this.getClass().getClassLoader().getResourceAsStream("perfBisect.qdup.yaml")) {
+                    Files.copy(is, bisectYml);
+                } catch (IOException e) {
+                    // An error occurred copying the resource
+                    logger.errorv("Could not copy the workload defintion"); //needs to be more user friendly
+                    return CommandResult.FAILURE;
                 }
 
-                return CommandResult.SUCCESS;
+                //load config into memory
+//                Path config = Paths.get(configPath != null ? configPath : "");
+                if ( ! configFile.exists() ) {
+                    logger.errorv("Config file does not exist: " + configFile.toString());
+                    return CommandResult.FAILURE;
+                }
+                String confInp = new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8);
+
+                //validate input json
+                Validator validator = new Validator();
+                try {
+                    Set<ValidationMessage> errors =  validator.validate(confInp);
+                    if ( errors.size() > 0) {
+                        logger.errorv("The following errors occurred validating input json:");
+                        errors.forEach(err -> logger.error(err.getMessage()));
+                        return CommandResult.FAILURE;
+                    }
+                } catch (JsonProcessingException jpe){
+                    logger.errorv("Could not parse input json");
+                    return CommandResult.FAILURE;
+                }
+
+                String curUser = System.getProperty("user.name");
+                String curHost = InetAddress.getLocalHost().getHostName();
+
+                //build custom qDup args
+                String[] args = new String[]{
+                        "-B" ,
+                        tempDirWithPrefix.toAbsolutePath().toString(),
+                        bisectYml.toAbsolutePath().toString(),
+                        "-S" ,
+                        "INPUT=" + confInp,
+                        "-S" ,
+                        "USER=" + curUser,
+                        "-S",
+                        "HOST=" + curHost
+                };
+
+                //new qDup instance
+                QDup qDup = new QDup(args);
+
+                //register custom qDup commands with parser
+                Parser parser = Parser.getInstance();
+                GitBisect.GitBisectInitCmd.extendParse(parser);
+                GitBisect.GitBisectCmd.extendParse(parser);
+                GitBisect.GitBisectUpdateCmd.extendParse(parser);
+                ScalarFileLimitValidatorCmd.extendParse(parser);
+                QdupProcessCmd.extendParse(parser);
+
+                //execute qDup
+                if( qDup.run() ){
+                    //complete correctly
+                    //TODO:: get output file
+                    File resultFile = new File(qDup.getOutputPath() + File.separator + curHost + File.separator + "result.json");
+                    if ( resultFile.exists()) {
+                        copyFile(resultFile, outputFile);
+
+                        return CommandResult.SUCCESS;
+                    } else {
+                        logger.errorv("Could not find result file");
+                        return CommandResult.FAILURE;
+                    }
+                } else {
+                    //QDUP failed to run bisect
+                    return CommandResult.FAILURE;
+                }
             } catch (Exception e) {
                 logger.errorv("Error occurred: {0}", e.getMessage());
                 return CommandResult.FAILURE;
             }
         }
 
-        void initialize(File configFile) {
+    }
 
-            try {
-                JsonNode json = new ObjectMapper().readTree(configFile);
-
-                //Initialize git repo
-                bisect = GitBisect.Builder.instance()
-                        .remoteRepo(getJsonScalar(json, "/project/repoUrl"))
-                        .badCommit(getJsonScalar(json, "/project/badCommit"))
-                        .goodCommit(getJsonScalar(json, "/project/goodCommit"))
-                        .localDir(createTempPath("perfbisect-"))
-                        .build();
-
-                actions.add(() -> bisect.checkoutRepo());
-                actions.add(() -> bisect.checkoutCommit(getJsonScalar(json, "/project/badCommit")));
-                actions.add(() -> bisect.initializeBisect());
-
-                //Initialize qDup
-                runner = QDupRunner.Builder.instance()
-                        .remoteRepo(getJsonScalar(json, "/qDup/repoUrl"))
-                        .branch(getJsonScalar(json, "/qDup/branch"))
-                        .scriptFile(getJsonScalar(json, "/qDup/scriptFile"))
-                        .params(getJsonMap(json, "/qDup/params"))
-                        .credentials(getJsonMap(json, "/qDup/credentials"))
-                        .commitParam(getJsonScalar(json, "/qDup/commitParam"))
-                        .localDir(createTempPath("perf-qDup-"))
-                        .build();
-
-                actions.add(() -> runner.checkoutScriptRepo());
-
-
-                Path tempDirWithPrefix = createTempPath("qDup-");
-                actions.add(() -> runner.runIteration(tempDirWithPrefix, null));
-                actions.add(() -> checkResult(tempDirWithPrefix));
-
-
-                //Initialize validator
-                validator = Validator.buildValidator(getJsonNode(json, "/validator"));
-
-
-            } catch (IOException ioe) {
-                logger.errorv("Could not parse file: {0}; {1}", configFile, ioe.getMessage());
-            }
+    private static void copyFile(File sourceFile, File destFile) throws IOException {
+        if(!destFile.exists()) {
+            destFile.createNewFile();
         }
 
-        private void checkResult(Path tempDirWithPrefix) {
-            actions.add(() -> logger.info("Comparing result"));
+        try (FileChannel source = new RandomAccessFile(sourceFile,"rw").getChannel();
+             FileChannel destination = new RandomAccessFile(destFile,"rw").getChannel();) {
 
-            GitBisect.CommitType type = validator.validateResult(tempDirWithPrefix) ? GitBisect.CommitType.GOOD : GitBisect.CommitType.BAD;
+            long position = 0;
+            long count    = source.size();
 
-            bisect.markResult(bisect.getCurrentCommitID(), type);
-
-            if (!bisect.isComplete()) {// run qDup script with next bisected git commit
-                Path newTempDirWithPrefix = createTempPath("qDup-");
-                actions.add(() -> runner.runIteration(newTempDirWithPrefix, "-S", runner.config.commitParam.concat("=").concat(bisect.getCurrentCommitID())));
-                actions.add(() -> checkResult(newTempDirWithPrefix));
-                tempDirWithPrefix = null;
-
-            } else { //found bad commit!
-                actions.add(() -> logger.infov("Found Bad commitID: {0}", bisect.getBadCommit()));
-                badCommitID = bisect.getBadCommit();
-                writeResultToFile();
-            }
+            source.transferTo(position, count, destination);
         }
-
-        private void writeResultToFile() {
-            if (outputFile != null) {
-                if (!outputFile.exists()) {
-                    try {
-                        outputFile.createNewFile();
-                        FileWriter myWriter = new FileWriter(outputFile);
-                        myWriter.write(badCommitID);
-                        myWriter.close();
-                    } catch (IOException ioException) {
-                        logger.errorv("Could not create output file: {0} ({1})", outputFile.getAbsolutePath(), ioException.getMessage());
-                    }
-                }
-
-
-            }
-        }
-
     }
 }
