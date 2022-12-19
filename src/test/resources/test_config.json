@@ -12,17 +12,9 @@
   },
   "qDup": {
     "scriptFile": "https://raw.githubusercontent.com/johnaohara/perf-bisect-qDup-scripts/main/test-script.yaml",
-    "utilityScripts": [
-      "core-scripts/util.yaml"
-    ],
     "repoUrl": "https://github.com/johnaohara/perf-bisect-qDup-scripts.git",
-    "branch": "*/main",
-    "credentials": {
-      "user": "",
-      "pword": ""
-    },
     "commitParam": "WORKLOAD_COMMIT",
-    "params": {
+    "overrideState": {
       "HOST": "localhost",
       "USER": "johara"
     }

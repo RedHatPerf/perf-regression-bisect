@@ -19,14 +19,13 @@ import org.jboss.logging.Logger;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.RandomAccessFile;
 import java.net.InetAddress;
-import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Set;
+
+import static io.hyperfoil.tools.Utils.copyFile;
 
 class PerfAutoBisect {
 
@@ -100,6 +99,7 @@ class PerfAutoBisect {
                         bisectYml.toAbsolutePath().toString(),
                         "-S" ,
                         "INPUT=" + confInp,
+                        //TODO: remove user/host override when we have local host runtime available
                         "-S" ,
                         "USER=" + curUser,
                         "-S",
@@ -142,18 +142,4 @@ class PerfAutoBisect {
 
     }
 
-    private static void copyFile(File sourceFile, File destFile) throws IOException {
-        if(!destFile.exists()) {
-            destFile.createNewFile();
-        }
-
-        try (FileChannel source = new RandomAccessFile(sourceFile,"rw").getChannel();
-             FileChannel destination = new RandomAccessFile(destFile,"rw").getChannel();) {
-
-            long position = 0;
-            long count    = source.size();
-
-            source.transferTo(position, count, destination);
-        }
-    }
 }

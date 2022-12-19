@@ -20,6 +20,7 @@ scripts:
           scriptUrl: ${{INPUT.qDup.scriptFile:}}
           commitParam: ${{INPUT.qDup.commitParam:}}
           commitValue: ${{RUN.commitHash:}}
+          overrideState: ${{INPUT.qDup.overrideState:}}
       - scalar-file-limit-validator:
           filename: localhost/result.out
           limit: 12

@@ -7,29 +7,47 @@ import io.hyperfoil.tools.qdup.config.yaml.Parser;
 import io.hyperfoil.tools.yaup.json.Json;
 import org.yaml.snakeyaml.error.YAMLException;
 
-import java.util.LinkedHashMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class QdupProcessCmd extends Cmd {
 
     private final String scriptUrl;
-    private final String commitParam;
-    private final String commitValue;
+    private final String commitParamExpr;
+    private final String commitValueExpr;
+    private final String overrideStateExpr;
 
     public QdupProcessCmd(String scriptUrl,
                           String commitParam,
-                          String commitValue) {
+                          String commitValue,
+                          String overrideStateExpr) {
         this.scriptUrl = scriptUrl;
-        this.commitParam = commitParam;
-        this.commitValue = commitValue;
+        this.commitParamExpr = commitParam;
+        this.commitValueExpr = commitValue;
+        this.overrideStateExpr = overrideStateExpr;
     }
 
     @Override
     public void run(String input, Context context) {
 
         String scriptUrl = Cmd.populateStateVariables(this.scriptUrl, this, context);
-        String commitParam = Cmd.populateStateVariables(this.commitParam, this, context);
-        String commitValue = Cmd.populateStateVariables(this.commitValue, this, context);
+        String commitParam = Cmd.populateStateVariables(this.commitParamExpr, this, context);
+        String commitValue = Cmd.populateStateVariables(this.commitValueExpr, this, context);
+        String[] paramsArr = new String[]{};
+        if ( this.overrideStateExpr != null) {
+            String params = Cmd.populateStateVariables(this.overrideStateExpr, this, context);
+            //TODO:: validate parsed json
+            Json paramsJson = Json.fromString(params);
 
+            List<String> populateParams = paramsJson.stream()
+                    .map(entry -> entry.getKey().toString() + "=" + entry.getValue().toString())
+                    .collect(Collectors.toList());
+            paramsArr = new String[populateParams.size() * 2];
+            for(int i = 0; i < populateParams.size() * 2; i=i+2){
+                paramsArr[i] = "-S";
+                paramsArr[i+1] = populateParams.get(Math.floorDiv(i, 2));
+            }
+        }
 
         String[] qDupArgs = {
                 scriptUrl
@@ -37,8 +55,10 @@ public class QdupProcessCmd extends Cmd {
                 , commitParam+"="+commitValue
         };
 
+        String[] args = Arrays.copyOf(qDupArgs, qDupArgs.length + paramsArr.length);
+        System.arraycopy(paramsArr, 0,args,  qDupArgs.length, paramsArr.length);
 
-        QDup toRun = new QDup(qDupArgs);
+        QDup toRun = new QDup(args);
 
         boolean ok = toRun.run();
 
@@ -62,19 +82,19 @@ public class QdupProcessCmd extends Cmd {
 
     @Override
     public Cmd copy() {
-        return new QdupProcessCmd(scriptUrl, commitParam, commitValue);
+        return new QdupProcessCmd(scriptUrl, commitParamExpr, commitValueExpr, overrideStateExpr);
     }
 
     public String getScriptUrl() {
         return scriptUrl;
     }
 
-    public String getCommitParam() {
-        return commitParam;
+    public String getCommitParamExpr() {
+        return commitParamExpr;
     }
 
-    public String getCommitValue() {
-        return commitValue;
+    public String getCommitValueExpr() {
+        return commitValueExpr;
     }
 
     public static void extendParse(Parser parser) {
@@ -86,33 +106,30 @@ public class QdupProcessCmd extends Cmd {
                     LinkedHashMap<Object, Object> opts = new LinkedHashMap<>();
                     map.put("qdup-process", opts);
                     opts.put("scriptUrl", cmd.getScriptUrl());
-                    opts.put("commitParam", cmd.getCommitParam());
-                    opts.put("commitValue", cmd.getCommitValue());
+                    opts.put("commitParam", cmd.getCommitParamExpr());
+                    opts.put("commitValue", cmd.getCommitValueExpr());
                     return map;
                 },
                 (str, prefix, suffix) -> {
-                    if (str == null || str.isEmpty()) {
-                        throw new YAMLException("qdup-process command cannot be empty");
-                    }
-                    String[] split = str.split(" ");
-                    if (split.length != 5) {
-                        throw new YAMLException("qdup-process command expecting 5 params");
-                    }
-                    //TODO: clean this up
-                    QdupProcessCmd newCommand = new QdupProcessCmd(split[0], split[1], split[2]);
-                    return newCommand;
+                    throw new YAMLException("qdup-process string processing not supported");
                 },
                 (json) -> {
                     validateNonEmptyValue(json, "scriptUrl");
                     validateNonEmptyValue(json, "commitParam");
                     validateNonEmptyValue(json, "commitValue");
 
-                    QdupProcessCmd bisectInitCmd = new QdupProcessCmd(json.getString("scriptUrl"),
-                            json.getString("commitParam"), json.getString("commitValue")
+                    String scriptUrl = json.getString("scriptUrl");
+                    String commitParam = json.getString("commitParam");
+                    String commitValue = json.getString("commitValue");
+                    String params = json.getString("overrideState", null);
+
+                    QdupProcessCmd bisectInitCmd = new QdupProcessCmd(scriptUrl,
+                            commitParam, commitValue,
+                            params
                     );
                     return bisectInitCmd;
                 },
-                "scriptUrl", "commitParam", "commitValue"
+                "scriptUrl", "commitParam", "commitValue", "overrideState"
         );
 
     }

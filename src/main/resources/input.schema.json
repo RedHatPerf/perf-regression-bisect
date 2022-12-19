@@ -63,47 +63,26 @@
         "repoUrl": {
           "type": "string"
         },
-        "branch": {
-          "type": "string"
-        },
-        "credentials": {
-          "type": "object",
-          "properties": {
-            "user": {
-              "type": "string"
-            },
-            "pword": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "user",
-            "pword"
-          ]
-        },
         "commitParam": {
           "type": "string"
         },
-        "params": {
+        "overrideState": {
           "type": "object",
           "properties": {
-            "HOST": {
-              "type": "string"
-            },
-            "USER": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "HOST",
-            "USER"
-          ]
+            "paramName": {"$ref": "#/definitions/mapString"},
+            "paramValue": {"$ref": "#/definitions/mapString"}
+          }
+        }
+      },
+      "definitions": {
+        "mapString": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
         }
       },
       "required": [
         "scriptFile",
         "repoUrl",
-        "branch",
         "commitParam"
       ]
     }
