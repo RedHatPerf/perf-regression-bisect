@@ -96,7 +96,16 @@ public class GitBisect {
             String goodCommitHash = Cmd.populateStateVariables(this.goodCommitHash,this,context);
 
             try {
-                File gitLocalDir = context.getScratchDir(uuid.toString());
+                File tmpDir = new File(context.getRunOutputPath().concat("-scratch"));
+                if( !tmpDir.exists() ) {
+                    if( !tmpDir.mkdirs()) {
+                        context.error(String.format("Enable to create temporary working area for git repository: %s", tmpDir.getAbsolutePath()));
+                        context.abort(false);
+                    }
+                }
+
+                //create unique scratch DIR
+                File gitLocalDir = tmpDir.toPath().resolve(uuid.toString()).toFile();
                 gitLocalDir.mkdirs();
                 git = Git.cloneRepository()
                         .setURI(remoteRepo)
@@ -115,8 +124,7 @@ public class GitBisect {
 
                 context.next(null);
             } catch (GitAPIException e) {
-                String errMsg = String.format("Failed to checkout git repo: %s\n%s", remoteRepo, e.getMessage());
-                context.error(errMsg);
+                context.error(String.format("Failed to checkout git repo: %s\n%s", remoteRepo, e.getMessage()));
                 context.abort(false);
             }
 
