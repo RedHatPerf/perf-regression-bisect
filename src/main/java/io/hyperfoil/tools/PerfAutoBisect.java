@@ -110,7 +110,7 @@ class PerfAutoBisect {
                 QDup qDup = new QDup(args);
 
                 //register custom qDup commands with parser
-                Parser parser = Parser.getInstance();
+                Parser parser = qDup.getYamlParser();
                 GitBisect.GitBisectInitCmd.extendParse(parser);
                 GitBisect.GitBisectCmd.extendParse(parser);
                 GitBisect.GitBisectUpdateCmd.extendParse(parser);
