@@ -96,7 +96,7 @@ public class GitBisect {
             String goodCommitHash = Cmd.populateStateVariables(this.goodCommitHash,this,context);
 
             try {
-                File tmpDir = new File(context.getRunOutputPath().concat("-scratch"));
+                File tmpDir = new File(context.getRunOutputPath().concat("-scratch/").concat(uuid.toString()));
                 if( !tmpDir.exists() ) {
                     if( !tmpDir.mkdirs()) {
                         context.error(String.format("Enable to create temporary working area for git repository: %s", tmpDir.getAbsolutePath()));
@@ -104,16 +104,13 @@ public class GitBisect {
                     }
                 }
 
-                //create unique scratch DIR
-                File gitLocalDir = tmpDir.toPath().resolve(uuid.toString()).toFile();
-                gitLocalDir.mkdirs();
                 git = Git.cloneRepository()
                         .setURI(remoteRepo)
-                        .setDirectory(gitLocalDir)
+                        .setDirectory(tmpDir)
                         .call();
 
                 Json gitBisectConfig = new Json();
-                gitBisectConfig.set(STATE_GIT_DIR, gitLocalDir.getAbsolutePath());
+                gitBisectConfig.set(STATE_GIT_DIR, tmpDir.getAbsolutePath());
                 gitBisectConfig.set(STATE_BAD_COMMIT, badCommitHash);
                 gitBisectConfig.set(STATE_GOOD_COMMIT, goodCommitHash);
                 gitBisectConfig.set(STATE_CUR_COMMIT, "");
