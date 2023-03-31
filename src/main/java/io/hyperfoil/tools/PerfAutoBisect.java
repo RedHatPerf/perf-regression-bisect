@@ -33,7 +33,7 @@ class PerfAutoBisect {
         AeshRuntimeRunner.builder().command(Bisector.class).args(args).execute();
     }
 
-    @CommandDefinition(name = "perfAutoBisect", description = "io.hyperfoil.tools.perfAutoBisect to a")
+    @CommandDefinition(name = "perfAutoBisect", description = "Perform Git Bisect with performance tests to identify which git commit introduced a performance regression")
     public static class Bisector implements Command {
 
         private static final Logger logger = Logger.getLogger(PerfAutoBisect.class);
