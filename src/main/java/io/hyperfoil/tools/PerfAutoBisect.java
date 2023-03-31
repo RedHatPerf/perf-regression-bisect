@@ -16,14 +16,14 @@ import org.aesh.command.invocation.CommandInvocation;
 import org.aesh.command.option.Option;
 import org.jboss.logging.Logger;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.InetAddress;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static io.hyperfoil.tools.Utils.copyFile;
 
@@ -58,22 +58,16 @@ class PerfAutoBisect {
                 Path tempDirWithPrefix = Files.createTempDirectory("perf-bisect-");
                 Path bisectYml = tempDirWithPrefix.resolve("perfBisect.qdup.yaml");
 
-                //extract qdup.yaml into tmpDir
-                try (InputStream is = this.getClass().getClassLoader().getResourceAsStream("perfBisect.qdup.yaml")) {
-                    Files.copy(is, bisectYml);
+                String confInp;
+                try (InputStream is = this.getClass().getClassLoader().getResourceAsStream("perfBisect.qdup.yaml");
+                     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(is, Charset.forName(StandardCharsets.UTF_8.name())))
+                ){
+                    //load config into memory
+                    confInp = bufferedReader.lines().collect(Collectors.joining());
                 } catch (IOException e) {
-                    // An error occurred copying the resource
-                    logger.errorv("Could not copy the workload defintion"); //needs to be more user friendly
+                    logger.errorv("Could not copy the workload defintion"); //needs to be more user-friendly
                     return CommandResult.FAILURE;
                 }
-
-                //load config into memory
-//                Path config = Paths.get(configPath != null ? configPath : "");
-                if ( ! configFile.exists() ) {
-                    logger.errorv("Config file does not exist: " + configFile.toString());
-                    return CommandResult.FAILURE;
-                }
-                String confInp = new String(Files.readAllBytes(configFile.toPath()), StandardCharsets.UTF_8);
 
                 //validate input json
                 Validator validator = new Validator();
